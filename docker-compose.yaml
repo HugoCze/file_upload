@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - file_storage:/app/uploads
+    environment:
+      - MAX_CONTENT_LENGTH=9663676416  # tanslated with unitconverter
+      - UPLOAD_FOLDER=uploads
+    restart: always
+    networks:
+      - upload-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:8000
+      - FILE_SIZE=1073741824  # tanslated with unitconverter
+    networks:
+      - upload-network
+    deploy:
+      replicas: 1  # by default
+
+networks:
+  upload-network:
+    driver: bridge
+
+volumes:
+  file_storage:
+    driver: local
