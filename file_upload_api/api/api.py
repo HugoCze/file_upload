@@ -8,7 +8,7 @@ from pathlib import Path
 from datetime import datetime
 from logs.logger import logger
 from fastapi.responses import JSONResponse
-from models.file_info import FileInfo, FileMetadata
+from models.file_info import FileInfo
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 
 upload_router = APIRouter()
@@ -31,11 +31,11 @@ async def save_file_info(file_info: FileInfo):
 @upload_router.post("/")
 async def upload_file(
     file: UploadFile = File(...),
-    metadata: FileMetadata = None,
     background_tasks: BackgroundTasks = None
 ):
-
     try:
+        start_time = datetime.now()
+        
         if not is_valid_extension(file.filename):
             logger.error(f"Invalid file extension: {file.filename}")
             raise HTTPException(
@@ -52,12 +52,14 @@ async def upload_file(
             while chunk := await file.read(CHUNK_SIZE):
                 await f.write(chunk)
 
+        upload_duration = (datetime.now() - start_time).total_seconds()
+
         file_info = FileInfo(
             filename=safe_filename,
             size=file_path.stat().st_size,
             storage_location=str(file_path),
-            upload_time=datetime.now().isoformat(),
-            metadata=metadata or FileMetadata(intended_location="/")
+            upload_date=start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            upload_duration=round(upload_duration, 2)  # Duration in seconds, rounded to 2 decimal places
         )
 
         background_tasks.add_task(save_file_info, file_info)
@@ -72,7 +74,7 @@ async def upload_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@data_router.get("/files/", response_model=List[FileInfo])
+@data_router.get("/", response_model=List[FileInfo])
 async def list_files():
 
     try:
