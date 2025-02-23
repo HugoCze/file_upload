@@ -1,7 +1,4 @@
 import json
-import shutil
-import asyncio
-import logging
 import aiofiles
 from typing import List
 from pathlib import Path
@@ -15,17 +12,31 @@ upload_router = APIRouter()
 data_router = APIRouter()
 
 UPLOAD_DIR = Path("storage")
-CHUNK_SIZE = 1024 * 1024 
+CHUNK_SIZE = 100 * 1024 * 1024 
 ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat'}
+BUFFER_SIZE = 100 
+file_info_buffer = []
 
 
 def is_valid_extension(filename: str) -> bool:
     return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
 
 
+async def flush_buffer():
+    global file_info_buffer
+    if file_info_buffer:
+        async with aiofiles.open(UPLOAD_DIR / "file_index.json", "a+", buffering=8192) as f:
+            await f.write("\n".join(file_info_buffer) + "\n")
+        file_info_buffer.clear()
+
+
 async def save_file_info(file_info: FileInfo):
-    async with aiofiles.open(UPLOAD_DIR / "file_index.json", "a+") as f:
-        await f.write(json.dumps(file_info.dict()) + "\n")
+    global file_info_buffer
+    
+    file_info_buffer.append(json.dumps(file_info.dict()))
+    
+    if len(file_info_buffer) >= BUFFER_SIZE:
+        await flush_buffer()
 
 
 @upload_router.post("/")
@@ -48,7 +59,7 @@ async def upload_file(
         safe_filename = f"{timestamp}_{file.filename}"
         file_path = UPLOAD_DIR / safe_filename
 
-        async with aiofiles.open(file_path, 'wb') as f:
+        async with aiofiles.open(file_path, 'wb', buffering=8192) as f:
             while chunk := await file.read(CHUNK_SIZE):
                 await f.write(chunk)
 
@@ -63,6 +74,7 @@ async def upload_file(
         )
 
         background_tasks.add_task(save_file_info, file_info)
+        background_tasks.add_task(flush_buffer)  # Ensure data is written even if buffer isn't full
 
         return JSONResponse(
             status_code=201,
@@ -82,7 +94,7 @@ async def list_files():
         index_path = UPLOAD_DIR / "file_index.json"
         
         if index_path.exists():
-            async with aiofiles.open(index_path, "r") as f:
+            async with aiofiles.open(index_path, "r", buffering=8192) as f:
                 async for line in f:
                     if line.strip():
                         files.append(json.loads(line))
