@@ -12,7 +12,6 @@ upload_router = APIRouter()
 data_router = APIRouter()
 
 UPLOAD_DIR = Path("storage")
-CHUNK_SIZE = 100 * 1024 * 1024 
 ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat'}
 BUFFER_SIZE = 100 
 file_info_buffer = []
@@ -39,6 +38,26 @@ async def save_file_info(file_info: FileInfo):
         await flush_buffer()
 
 
+def get_optimal_chunk_size(file_size: int) -> int:
+    """
+    Determine optimal chunk size based on file size
+    """
+    MIN_CHUNK = 5 * 1024 * 1024    # 5MB
+    MAX_CHUNK = 20 * 1024 * 1024   # 20MB
+    DEFAULT_CHUNK = 8 * 1024 * 1024  # 8MB for files where size can't be determined
+    
+    if not file_size:
+        return DEFAULT_CHUNK
+        
+    if file_size <= 2 * 1024 * 1024 * 1024:    # 2GB
+        return MIN_CHUNK
+    elif file_size >= 8 * 1024 * 1024 * 1024:  # 8GB
+        return MAX_CHUNK
+    else:
+        # Scale chunk size between min and max based on file size
+        return min(MAX_CHUNK, max(MIN_CHUNK, file_size // 500))
+
+
 @upload_router.post("/")
 async def upload_file(
     file: UploadFile = File(...),
@@ -54,13 +73,22 @@ async def upload_file(
                 detail=f"File type not allowed. Allowed types: {ALLOWED_EXTENSIONS}"
             )
 
+        # Get file size if possible
+        try:
+            file_size = file.size  # Some upload handlers provide this
+        except AttributeError:
+            file_size = 0  # Will use default chunk size
+            logger.warning("Could not determine file size, using default chunk size")
+
+        chunk_size = get_optimal_chunk_size(file_size)
+        
         # Unique filename 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_filename = f"{timestamp}_{file.filename}"
         file_path = UPLOAD_DIR / safe_filename
 
         async with aiofiles.open(file_path, 'wb', buffering=8192) as f:
-            while chunk := await file.read(CHUNK_SIZE):
+            while chunk := await file.read(chunk_size):
                 await f.write(chunk)
 
         upload_duration = (datetime.now() - start_time).total_seconds()
