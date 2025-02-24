@@ -6,7 +6,7 @@ from datetime import datetime
 from logs.logger import logger
 from fastapi.responses import JSONResponse
 from models.file_info import FileInfo
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
 
 upload_router = APIRouter()
 data_router = APIRouter()
@@ -61,6 +61,8 @@ def get_optimal_chunk_size(file_size: int) -> int:
 @upload_router.post("/")
 async def upload_file(
     file: UploadFile = File(...),
+    client_id: str = Form(...),
+    timestamp: str = Form(...),
     background_tasks: BackgroundTasks = None
 ):
     try:
@@ -83,7 +85,6 @@ async def upload_file(
         chunk_size = get_optimal_chunk_size(file_size)
         
         # Unique filename 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_filename = f"{timestamp}_{file.filename}"
         file_path = UPLOAD_DIR / safe_filename
 

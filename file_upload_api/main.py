@@ -1,4 +1,3 @@
-import os    
 import uvicorn
 from pathlib import Path
 from fastapi import FastAPI
@@ -32,7 +31,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

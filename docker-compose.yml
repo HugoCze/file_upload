@@ -16,6 +16,8 @@ services:
       dockerfile: client/Dockerfile
     ports:
       - "5000-5005:5000"
+    environment:
+      - API_URL=http://api:8000
     networks:
       - upload_network
     deploy:
