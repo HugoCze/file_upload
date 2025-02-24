@@ -61,13 +61,19 @@ def get_optimal_chunk_size(file_size: int) -> int:
 @upload_router.post("/")
 async def upload_file(
     file: UploadFile = File(...),
-    client_id: str = Form(...),
-    timestamp: str = Form(...),
+    client_id: str = Form(None),
+    timestamp: str = Form(None),
     background_tasks: BackgroundTasks = None
 ):
     try:
         start_time = datetime.now()
         
+        # Set default values if not provided
+        if timestamp is None:
+            timestamp = start_time.strftime("%Y%m%d_%H%M%S")
+        if client_id is None:
+            client_id = "default_client"
+
         if not is_valid_extension(file.filename):
             logger.error(f"Invalid file extension: {file.filename}")
             raise HTTPException(

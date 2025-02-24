@@ -1,3 +1,4 @@
 env
 test_file*
 file_upload_api/storage/*
+/storage

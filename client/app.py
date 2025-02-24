@@ -33,7 +33,7 @@ def perform_upload():
         }
         
         response = requests.post(
-            f"{api_url}/api/uploads/upload", 
+            f"{api_url}/api/uploads/", 
             files=files,
             data=data
         )
@@ -62,30 +62,40 @@ def trigger_upload():
 
 @app.route('/trigger-all')
 def trigger_all_containers():
-    base_url = "http://client"
-    ports = range(5000, 5006)
-    
-    def trigger_container(port):
-        try:
-            time.sleep(0.1 * random.random())
-            requests.get(f"http://client:{port}/trigger-upload")
-        except Exception as e:
-            print(f"Error triggering container on port {port}: {str(e)}")
+    try:
+        # Use DNS to get all IPs for the client service
+        ips = socket.getaddrinfo('client', 5000, socket.AF_INET, socket.SOCK_STREAM)
+        
+        def trigger_container(ip):
+            try:
+                time.sleep(0.1 * random.random())  # Small random delay to prevent thundering herd
+                container_url = f"http://{ip[4][0]}:5000/trigger-upload"
+                response = requests.get(container_url)
+                print(f"Triggered upload on {ip[4][0]}: {response.status_code}")
+            except Exception as e:
+                print(f"Error triggering container at {ip[4][0]}: {str(e)}")
 
-    threads = []
-    for port in ports:
-        thread = threading.Thread(target=trigger_container, args=(port,))
-        thread.start()
-        threads.append(thread)
+        threads = []
+        for ip in ips:
+            thread = threading.Thread(target=trigger_container, args=(ip,))
+            thread.start()
+            threads.append(thread)
 
-    for thread in threads:
-        thread.join()
+        for thread in threads:
+            thread.join()
 
-    return jsonify({
-        'status': 'success',
-        'message': 'Triggered upload on all containers',
-        'container_id': get_container_id()
-    })
+        return jsonify({
+            'status': 'success',
+            'message': f'Triggered upload on {len(ips)} containers',
+            'container_id': get_container_id(),
+            'triggered_count': len(ips)
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Error triggering containers: {str(e)}',
+            'container_id': get_container_id()
+        }), 500
 
 if __name__ == '__main__':
     print(f"Client container {get_container_id()} starting...")
