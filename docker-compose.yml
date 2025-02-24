@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: file_upload_api/Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - upload_network
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    ports:
+      - "5000:5000"
+    networks:
+      - upload_network
+    deploy:
+      replicas: 6
+
+networks:
+  upload_network:
+    driver: bridge 
