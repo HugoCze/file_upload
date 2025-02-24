@@ -9,9 +9,11 @@ from logs.logger import logger
 from fastapi.responses import JSONResponse
 from models.file_info import FileInfo
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form, Body
+from pydantic import BaseModel
 
 upload_router = APIRouter()
 data_router = APIRouter()
+health_router = APIRouter()
 
 UPLOAD_DIR = Path("storage")
 ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat', '.mp4', '.wav'}
@@ -35,7 +37,7 @@ async def flush_buffer():
 async def save_file_info(file_info: FileInfo):
     global file_info_buffer
     
-    file_info_buffer.append(json.dumps(file_info.model_dump()))
+    file_info_buffer.append(json.dumps(file_info.dict()))
     
     if len(file_info_buffer) >= BUFFER_SIZE:
         await flush_buffer()
@@ -119,7 +121,7 @@ async def upload_file(
 
         return JSONResponse(
             status_code=201,
-            content={"message": "File uploaded successfully", "file_info": file_info.model_dump()}
+            content={"message": "File uploaded successfully", "file_info": file_info.dict()}
         )
 
     except Exception as e:
@@ -245,5 +247,18 @@ async def finalize_upload(
     
     return JSONResponse(
         status_code=201,
-        content={"message": "File uploaded successfully", "file_info": file_info.model_dump()}
+        content={"message": "File uploaded successfully", "file_info": json.dumps(file_info.dict())}
     )
+
+@health_router.get("")
+@health_router.get("/")
+async def health_check():
+    return {"status": "healthy"}
+
+class FilenameCheck(BaseModel):
+    filename: str
+
+@health_router.post("/check-extension/")
+async def check_extension(file_check: FilenameCheck):
+    _, extension = os.path.splitext(file_check.filename)
+    return {"allowed": extension.lower() in ALLOWED_EXTENSIONS}

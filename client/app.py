@@ -140,11 +140,8 @@ def trigger_all_containers():
             ]
             results = [future.result() for future in futures]
 
-        total_time = round(time.time() - start_time, 2)
-
         return jsonify({
-            'status': 'completed',
-            'container_id': container_id,
+            'message': 'All client containers triggered successfully'
         })
         
     except Exception as e:
@@ -152,9 +149,7 @@ def trigger_all_containers():
         logger.error(f"[Container {container_id}] Error in trigger_all: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
-            'message': str(e),
-            'container_id': get_container_id(),
-            'total_time': f"{total_time}s"
+            'message': str(e)
         }), 500
 
 @app.route('/upload', methods=['POST'])
@@ -172,6 +167,14 @@ def upload_file():
             'message': str(e),
             'container_id': get_container_id()
         }), 500
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'container_id': get_container_id()
+    })
 
 if __name__ == '__main__':
     container_id = get_container_id()

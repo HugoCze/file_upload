@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from logs.logger import logger
 from fastapi.middleware.cors import CORSMiddleware
-from api.api import upload_router, data_router
+from api.api import upload_router, data_router, health_router
 
 
 
@@ -42,7 +42,7 @@ app.add_middleware(
 
 app.include_router(upload_router, prefix="/api/uploads", tags=["uploads"])
 app.include_router(data_router, prefix="/api/data", tags=["data"])
-
+app.include_router(health_router, prefix="/api/health", tags=["health"])
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -7,6 +7,8 @@ from logs.logger import logger
 
 
 class FileGenerator:
+
+
     def __init__(self, output_dir="generated_files"):
         self.output_dir = output_dir
         self.extensions = ['.txt', '.pdf', '.doc', '.docx', '.csv', '.dat', '.mp4', '.wav']
@@ -14,7 +16,8 @@ class FileGenerator:
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Initialized FileGenerator with output directory: {output_dir}")
         
-    def create_file(self, filename=None, min_size_gb=1, max_size_gb=4):
+
+    def create_file(self, filename=None, min_size_gb=4, max_size_gb=8):
         size_gb = random.uniform(min_size_gb, max_size_gb)
         size_bytes = int(size_gb * 1024 * 1024 * 1024)  
         
