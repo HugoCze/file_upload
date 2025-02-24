@@ -1,30 +1,20 @@
 import os
-import random
-import string
-import logging
 import sys
+import random
+from logs.logger import logger
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [FileGenerator] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    stream=sys.stdout,
-    force=True
-)
-logger = logging.getLogger(__name__)
+
+
 
 class FileGenerator:
     def __init__(self, output_dir="generated_files"):
-        """Initialize FileGenerator with an output directory."""
         self.output_dir = output_dir
         self.extensions = ['.txt', '.pdf', '.doc', '.docx', '.csv', '.dat', '.mp4', '.wav']
 
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Initialized FileGenerator with output directory: {output_dir}")
         
-    def create_file(self, filename=None, min_size_gb=1, max_size_gb=4):
-        """Create a file with random content of specified size range in GB."""
+    def create_file(self, filename=None, min_size_gb=4, max_size_gb=8):
         size_gb = random.uniform(min_size_gb, max_size_gb)
         size_bytes = int(size_gb * 1024 * 1024 * 1024)  
         
@@ -52,7 +42,6 @@ class FileGenerator:
         return filepath
 
     def create_multiple_files(self, num_files, min_size_gb=1, max_size_gb=4):
-        """Create multiple files of specified size range."""
         logger.info(f"Starting batch creation of {num_files} files")
         sys.stdout.flush()
         
