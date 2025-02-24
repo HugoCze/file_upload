@@ -36,9 +36,7 @@ async def flush_buffer():
 
 async def save_file_info(file_info: FileInfo):
     global file_info_buffer
-    
     file_info_buffer.append(json.dumps(file_info.dict()))
-    
     if len(file_info_buffer) >= BUFFER_SIZE:
         await flush_buffer()
 
@@ -181,11 +179,12 @@ async def initialize_upload(upload_info: dict = Body(...), background_tasks: Bac
         'file_info': file_info
     }
     
-    # Save the pending file info
+
     background_tasks.add_task(save_file_info, file_info)
     background_tasks.add_task(flush_buffer)
     
     return {"upload_id": upload_id}
+
 
 @upload_router.post("/chunk")
 async def upload_chunk(
@@ -195,16 +194,14 @@ async def upload_chunk(
 ):
     if upload_id not in active_uploads:
         raise HTTPException(status_code=400, detail="Invalid upload ID")
-    
     upload_info = active_uploads[upload_id]
     chunk_path = upload_info['temp_dir'] / f"chunk_{chunk_number}"
-    
     async with aiofiles.open(chunk_path, 'wb') as f:
         await f.write(chunk)
-    
     upload_info['chunks_received'] += 1
-    
     return {"status": "success"}
+
+
 
 @upload_router.post("/finalize")
 async def finalize_upload(
@@ -223,12 +220,10 @@ async def finalize_upload(
         for chunk_path in chunk_files:
             async with aiofiles.open(chunk_path, 'rb') as chunk_file:
                 await final_file.write(await chunk_file.read())
+            os.remove(chunk_path) 
     
-    for chunk_file in chunk_files:
-        os.remove(chunk_file)
     os.rmdir(upload_info['temp_dir'])
     
-
     file_info = FileInfo(
         filename=upload_info['filename'],
         size=os.path.getsize(final_path),
@@ -249,6 +244,8 @@ async def finalize_upload(
         status_code=201,
         content={"message": "File uploaded successfully", "file_info": json.dumps(file_info.dict())}
     )
+
+
 
 @health_router.get("")
 @health_router.get("/")

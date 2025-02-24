@@ -21,14 +21,25 @@ services:
     build:
       context: .
       dockerfile: client/Dockerfile
-    ports:
-      - "5000-5005:5000"
+    expose:
+      - "5000"
     networks:
       - upload_network
     environment:
       - API_URL=http://api:8000
     depends_on:
       - api
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "5000-5005:5000-5005"
+    networks:
+      - upload_network
+    depends_on:
+      - client
 
 networks:
   upload_network:

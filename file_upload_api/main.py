@@ -7,8 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.api import upload_router, data_router, health_router
 
 
-
 UPLOAD_DIR = Path("storage")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,14 +23,12 @@ async def lifespan(app: FastAPI):
     
     logger.info("Shutting down application")
 
-
 app = FastAPI(
     title="File Upload Service",
     description="Service for handling large file uploads with metadata",
     version="1.0.0",
     lifespan=lifespan
 )
-
 
 app.add_middleware(
     CORSMiddleware,
