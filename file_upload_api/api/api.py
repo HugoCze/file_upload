@@ -137,7 +137,12 @@ async def list_files():
             async with aiofiles.open(index_path, "r", buffering=8192) as f:
                 async for line in f:
                     if line.strip():
-                        files.append(json.loads(line))
+                        file_info = json.loads(line)
+                        # If there's a newer version of the same file, skip the older one
+                        if not any(f['filename'] == file_info['filename'] and 
+                                 f['upload_date'] > file_info['upload_date'] for f in files):
+                            files = [f for f in files if f['filename'] != file_info['filename']]
+                            files.append(file_info)
         
         return files
 
@@ -147,10 +152,21 @@ async def list_files():
 
 
 @upload_router.post("/init")
-async def initialize_upload(upload_info: dict = Body(...)):
+async def initialize_upload(upload_info: dict = Body(...), background_tasks: BackgroundTasks = None):
     upload_id = str(uuid.uuid4())
     temp_dir = UPLOAD_DIR / "temp" / upload_id
     os.makedirs(temp_dir, exist_ok=True)
+    
+    file_info = FileInfo(
+        filename=upload_info['filename'],
+        size=upload_info['total_size'],
+        storage_location=str(UPLOAD_DIR / upload_info['filename']),
+        upload_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        upload_duration=0.0,
+        file_creation_time=upload_info['file_creation_time'],
+        client_id=upload_info['client_id'],
+        status="pending"
+    )
     
     active_uploads[upload_id] = {
         'filename': upload_info['filename'],
@@ -159,8 +175,13 @@ async def initialize_upload(upload_info: dict = Body(...)):
         'temp_dir': temp_dir,
         'client_id': upload_info['client_id'],
         'timestamp': upload_info['timestamp'],
-        'file_creation_time': upload_info['file_creation_time']
+        'file_creation_time': upload_info['file_creation_time'],
+        'file_info': file_info
     }
+    
+    # Save the pending file info
+    background_tasks.add_task(save_file_info, file_info)
+    background_tasks.add_task(flush_buffer)
     
     return {"upload_id": upload_id}
 
@@ -205,15 +226,16 @@ async def finalize_upload(
         os.remove(chunk_file)
     os.rmdir(upload_info['temp_dir'])
     
+
     file_info = FileInfo(
         filename=upload_info['filename'],
         size=os.path.getsize(final_path),
         storage_location=str(final_path),
-        upload_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        upload_date=upload_info['file_info'].upload_date,  
         upload_duration=upload_data.get('upload_duration', 0),
         file_creation_time=upload_info['file_creation_time'],
         client_id=upload_info['client_id'],
-        creation_duration=upload_data.get('creation_duration', 0)
+        status="completed"
     )
     
     background_tasks.add_task(save_file_info, file_info)

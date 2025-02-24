@@ -112,51 +112,49 @@ def trigger_single_container(container_url, container_name, timeout):
     try:
         response = session.post(container_url, timeout=timeout)
         logger.info(f"[Container {container_id}] Triggered upload on {container_name}")
-        return response.json()
+        return {"status": "success", "container": container_name}
     except Exception as e:
-        logger.error(f"[Container {container_id}] Failed to trigger {container_name}: {str(e)}")
-        return {
-            "status": "error",
-            "container": container_name,
-            "error": str(e)
-        }
+        logger.error(f"[Container {container_id}] Failed to trigger {container_name}")
+        return {"status": "failed", "container": container_name}
 
 @app.route('/trigger-all')
 def trigger_all_containers():
     """
     Trigger file upload on all containers concurrently using ThreadPoolExecutor
     """
+    start_time = time.time()
     try:
         container_id = get_container_id()
         logger.info(f"[Container {container_id}] Initiating uploads across all containers")
         
         project_name = os.getenv('COMPOSE_PROJECT_NAME', 'file_upload')
         container_urls = [
-            (f"http://{project_name}-client-{i}:5000/upload", f"{project_name}-client-{i}")
+            (f"http://{project_name}-client-{i}:5000/upload", f"client-{i}")
             for i in range(1, 7)  # Assuming 6 containers
         ]
         
-        # Use ThreadPoolExecutor to send requests concurrently
         with ThreadPoolExecutor(max_workers=6) as executor:
             futures = [
                 executor.submit(trigger_single_container, url, name, timeout)
                 for url, name in container_urls
             ]
-            all_results = [future.result() for future in futures]
+            results = [future.result() for future in futures]
+
+        total_time = round(time.time() - start_time, 2)
 
         return jsonify({
-            'status': 'success',
-            'message': 'All containers triggered concurrently',
+            'status': 'completed',
             'container_id': container_id,
-            'results': all_results
         })
         
     except Exception as e:
+        total_time = round(time.time() - start_time, 2)
         logger.error(f"[Container {container_id}] Error in trigger_all: {str(e)}", exc_info=True)
         return jsonify({
             'status': 'error',
             'message': str(e),
-            'container_id': get_container_id()
+            'container_id': get_container_id(),
+            'total_time': f"{total_time}s"
         }), 500
 
 @app.route('/upload', methods=['POST'])

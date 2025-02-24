@@ -10,5 +10,5 @@ class FileInfo(BaseModel):
     upload_date: str
     upload_duration: float
     file_creation_time: str
-    creation_duration: float
-    client_id: str
+    client_id: Optional[str] = None
+    status: str = "completed"
