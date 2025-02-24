@@ -1,3 +1,5 @@
+import os    
+import uvicorn
 from pathlib import Path
 from fastapi import FastAPI
 from file_upload_api.logs.logger import logger
@@ -44,10 +46,6 @@ app.include_router(data_router, prefix="/api/data", tags=["data"])
 
 
 if __name__ == "__main__":
-    import uvicorn
-    import os
-    # Change working directory to parent of file_upload_api
-    os.chdir(os.path.dirname(os.path.dirname(__file__)))
     uvicorn.run(
         "file_upload_api.main:app",
         host="0.0.0.0",
