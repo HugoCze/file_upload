@@ -1,12 +1,14 @@
 import json
 import aiofiles
-from typing import List
+from typing import List, Dict
 from pathlib import Path
 from datetime import datetime
 from logs.logger import logger
 from fastapi.responses import JSONResponse
 from models.file_info import FileInfo
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form, Body
+import uuid
+import os
 
 upload_router = APIRouter()
 data_router = APIRouter()
@@ -16,6 +18,8 @@ ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat', '.mp4', '
 BUFFER_SIZE = 100 
 file_info_buffer = []
 
+# Store upload metadata
+active_uploads: Dict[str, dict] = {}
 
 def is_valid_extension(filename: str) -> bool:
     return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
@@ -152,3 +156,88 @@ async def list_files():
 @data_router.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@upload_router.post("/init")
+async def initialize_upload(upload_info: dict = Body(...)):
+    upload_id = str(uuid.uuid4())
+    temp_dir = UPLOAD_DIR / "temp" / upload_id
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    active_uploads[upload_id] = {
+        'filename': upload_info['filename'],
+        'total_size': upload_info['total_size'],
+        'chunks_received': 0,
+        'temp_dir': temp_dir,
+        'client_id': upload_info['client_id'],
+        'timestamp': upload_info['timestamp'],
+        'file_creation_time': upload_info['file_creation_time'],
+        'creation_duration': upload_info['creation_duration']
+    }
+    
+    return {"upload_id": upload_id}
+
+@upload_router.post("/chunk")
+async def upload_chunk(
+    chunk: bytes = File(...),
+    chunk_number: int = Form(...),
+    upload_id: str = Form(...)
+):
+    if upload_id not in active_uploads:
+        raise HTTPException(status_code=400, detail="Invalid upload ID")
+    
+    upload_info = active_uploads[upload_id]
+    chunk_path = upload_info['temp_dir'] / f"chunk_{chunk_number}"
+    
+    async with aiofiles.open(chunk_path, 'wb') as f:
+        await f.write(chunk)
+    
+    upload_info['chunks_received'] += 1
+    
+    return {"status": "success"}
+
+@upload_router.post("/finalize")
+async def finalize_upload(
+    upload_data: dict = Body(...),
+    background_tasks: BackgroundTasks = None
+):
+    upload_id = upload_data['upload_id']
+    if upload_id not in active_uploads:
+        raise HTTPException(status_code=400, detail="Invalid upload ID")
+    
+    upload_info = active_uploads[upload_id]
+    final_path = UPLOAD_DIR / upload_info['filename']
+    
+    # Combine chunks
+    async with aiofiles.open(final_path, 'wb') as final_file:
+        chunk_files = sorted(upload_info['temp_dir'].glob("chunk_*"))
+        for chunk_path in chunk_files:
+            async with aiofiles.open(chunk_path, 'rb') as chunk_file:
+                await final_file.write(await chunk_file.read())
+    
+    # Clean up temp directory
+    for chunk_file in chunk_files:
+        os.remove(chunk_file)
+    os.rmdir(upload_info['temp_dir'])
+    
+    # Create file info
+    file_info = FileInfo(
+        filename=upload_info['filename'],
+        size=os.path.getsize(final_path),
+        storage_location=str(final_path),
+        upload_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        upload_duration=0,  # Calculate if needed
+        file_creation_time=upload_info['file_creation_time'],
+        creation_duration=upload_info['creation_duration'],
+        client_id=upload_info['client_id']  # Add client_id to file info
+    )
+    
+    background_tasks.add_task(save_file_info, file_info)
+    background_tasks.add_task(flush_buffer)
+    
+    del active_uploads[upload_id]
+    
+    return JSONResponse(
+        status_code=201,
+        content={"message": "File uploaded successfully", "file_info": file_info.model_dump()}
+    )

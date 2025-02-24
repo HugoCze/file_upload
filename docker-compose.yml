@@ -33,37 +33,12 @@ services:
       dockerfile: client/Dockerfile
     ports:
       - "5000-5005:5000"
-    environment:
-      - API_URL=http://api:8000
-      - REQUESTS_TIMEOUT=30
-      - MAX_RETRIES=3
-      - RETRY_BACKOFF=5
     networks:
       - upload_network
-    deploy:
-      replicas: 6
-      resources:
-        limits:
-          memory: 8G
-        reservations:
-          memory: 2G
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 120s
+    environment:
+      - API_URL=http://api:8000
     depends_on:
-      api:
-        condition: service_healthy
-    mem_swappiness: 0
-    mem_reservation: 2G
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
+      - api
 
 networks:
   upload_network:

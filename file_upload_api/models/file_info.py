@@ -11,3 +11,4 @@ class FileInfo(BaseModel):
     upload_duration: float
     file_creation_time: str
     creation_duration: float
+    client_id: str

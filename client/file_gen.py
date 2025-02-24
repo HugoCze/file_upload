@@ -23,7 +23,7 @@ class FileGenerator:
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Initialized FileGenerator with output directory: {output_dir}")
         
-    def create_file(self, filename=None, min_size_gb=4, max_size_gb=8):
+    def create_file(self, filename=None, min_size_gb=2, max_size_gb=4):
         """Create a file with random content of specified size range in GB."""
         size_gb = random.uniform(min_size_gb, max_size_gb)
         size_bytes = int(size_gb * 1024 * 1024 * 1024)  
@@ -51,7 +51,7 @@ class FileGenerator:
             
         return filepath
 
-    def create_multiple_files(self, num_files, min_size_gb=4, max_size_gb=8):
+    def create_multiple_files(self, num_files, min_size_gb=2, max_size_gb=4):
         """Create multiple files of specified size range."""
         logger.info(f"Starting batch creation of {num_files} files")
         sys.stdout.flush()
