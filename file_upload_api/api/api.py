@@ -147,3 +147,8 @@ async def list_files():
     except Exception as e:
         logger.error(f"Failed to list files: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve file list")
+
+
+@data_router.get("/health")
+async def health_check():
+    return {"status": "healthy"}
