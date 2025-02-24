@@ -28,7 +28,7 @@ services:
       context: .
       dockerfile: client/Dockerfile
     ports:
-      - "9000-9005:5000"
+      - "5000-5005:5000"
     networks:
       - upload_network
     environment:
