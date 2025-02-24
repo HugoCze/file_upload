@@ -9,6 +9,13 @@ services:
       - "8000:8000"
     networks:
       - upload_network
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+    restart: unless-stopped
 
   client:
     build:
@@ -22,6 +29,20 @@ services:
       - upload_network
     deploy:
       replicas: 6
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    mem_swappiness: 0
+    oom_kill_disable: true
+    mem_reservation: 2G
+    memswap_limit: 0
 
 networks:
   upload_network:
