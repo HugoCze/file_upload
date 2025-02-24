@@ -1,29 +1,20 @@
 import os
+import sys
 import time
 import socket
+import random
 import requests
 from flask import Flask, jsonify
-import random
+from logs.logger import logger
 from file_gen import FileGenerator
-import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from concurrent.futures import ThreadPoolExecutor
-import sys
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(name)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    force=True
-)
-logger = logging.getLogger('ClientApp')
 
 app = Flask(__name__)
 file_generator = FileGenerator()
 
-# Configure retry strategy
 retry_strategy = Retry(
     total=int(os.getenv('MAX_RETRIES', 3)),
     backoff_factor=float(os.getenv('RETRY_BACKOFF', 5)),
@@ -35,10 +26,9 @@ adapter = HTTPAdapter(max_retries=retry_strategy)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
 
-# Use the session for requests with timeout
 timeout = int(os.getenv('REQUESTS_TIMEOUT', 30))
 
-CHUNK_SIZE = 8 * 1024 * 1024  # 8MB chunks
+CHUNK_SIZE = 8 * 1024 * 1024
 
 def get_container_id():
     return socket.gethostname()
@@ -48,33 +38,30 @@ def create_and_upload_file():
     api_url = os.getenv('API_URL', 'http://api:8000')
     
     try:
-        # Create file
         logger.info(f"[Container {container_id}] Starting file generation...")
-        creation_start = time.time()
+        start_time = time.time()
         filepath = file_generator.create_file()
-        creation_duration = round(time.time() - creation_start, 2)
-        creation_time = time.strftime("%Y-%m-%d %H:%M:%S")
+        creation_duration = round(time.time() - start_time, 2)
         file_size = os.path.getsize(filepath)
-        logger.info(f"[Container {container_id}] File generated: {filepath} (Size: {file_size} bytes) in {creation_duration} seconds")
+        creation_time = time.strftime("%Y-%m-%d %H:%M:%S")
+        logger.info(f"[Container {container_id}] File generated: {filepath} (Size: {file_size} bytes)")
         
-        # Upload file in chunks
+        upload_start = time.time()
         logger.info(f"[Container {container_id}] Initializing upload for {filepath}")
         
-        # Initialize upload
         init_data = {
             'client_id': container_id,
             'timestamp': str(time.time()),
             'file_creation_time': creation_time,
-            'creation_duration': creation_duration,
             'filename': os.path.basename(filepath),
-            'total_size': file_size
+            'total_size': file_size,
+            'creation_duration': creation_duration
         }
         
         response = session.post(f"{api_url}/api/uploads/init", json=init_data)
         upload_id = response.json()['upload_id']
         logger.info(f"[Container {container_id}] Upload initialized with ID: {upload_id}")
         
-        # Upload chunks
         with open(filepath, 'rb') as f:
             chunk_number = 0
             while chunk := f.read(CHUNK_SIZE):
@@ -87,21 +74,26 @@ def create_and_upload_file():
                 logger.info(f"[Container {container_id}] Uploaded chunk {chunk_number} for upload {upload_id}")
                 chunk_number += 1
         
-        # Finalize upload
         logger.info(f"[Container {container_id}] Finalizing upload {upload_id}")
+        upload_duration = round(time.time() - upload_start, 2)
+        
         response = session.post(
             f"{api_url}/api/uploads/finalize",
-            json={'upload_id': upload_id}
+            json={
+                'upload_id': upload_id,
+                'upload_duration': upload_duration,
+                'creation_duration': creation_duration
+            }
         )
         
-        # Clean up
         os.remove(filepath)
-        logger.info(f"[Container {container_id}] Upload completed and file {filepath} removed")
+        logger.info(f"[Container {container_id}] Upload completed in {upload_duration} seconds and file {filepath} removed")
         
         return {
             'status': 'success',
             'container_id': container_id,
-            'upload_id': upload_id
+            'upload_id': upload_id,
+            'upload_duration': upload_duration
         }
         
     except Exception as e:
@@ -112,35 +104,49 @@ def create_and_upload_file():
             'error': str(e)
         }
 
+def trigger_single_container(container_url, container_name, timeout):
+    """
+    Helper function to trigger upload for a single container
+    """
+    container_id = get_container_id()
+    try:
+        response = session.post(container_url, timeout=timeout)
+        logger.info(f"[Container {container_id}] Triggered upload on {container_name}")
+        return response.json()
+    except Exception as e:
+        logger.error(f"[Container {container_id}] Failed to trigger {container_name}: {str(e)}")
+        return {
+            "status": "error",
+            "container": container_name,
+            "error": str(e)
+        }
+
 @app.route('/trigger-all')
 def trigger_all_containers():
     """
-    Trigger file upload on all containers by making requests to each container
+    Trigger file upload on all containers concurrently using ThreadPoolExecutor
     """
     try:
         container_id = get_container_id()
         logger.info(f"[Container {container_id}] Initiating uploads across all containers")
         
-        # Get list of all client containers
-        all_results = []
         project_name = os.getenv('COMPOSE_PROJECT_NAME', 'file_upload')
-        for i in range(1, 7):  # Assuming 6 containers
-            container_url = f"http://{project_name}-client-{i}:5000/upload"
-            try:
-                response = session.post(container_url, timeout=timeout)
-                all_results.append(response.json())
-                logger.info(f"[Container {container_id}] Triggered upload on {project_name}-client-{i}")
-            except Exception as e:
-                logger.error(f"[Container {container_id}] Failed to trigger {project_name}-client-{i}: {str(e)}")
-                all_results.append({
-                    "status": "error", 
-                    "container": f"{project_name}-client-{i}", 
-                    "error": str(e)
-                })
+        container_urls = [
+            (f"http://{project_name}-client-{i}:5000/upload", f"{project_name}-client-{i}")
+            for i in range(1, 7)  # Assuming 6 containers
+        ]
+        
+        # Use ThreadPoolExecutor to send requests concurrently
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            futures = [
+                executor.submit(trigger_single_container, url, name, timeout)
+                for url, name in container_urls
+            ]
+            all_results = [future.result() for future in futures]
 
         return jsonify({
             'status': 'success',
-            'message': 'All containers triggered',
+            'message': 'All containers triggered concurrently',
             'container_id': container_id,
             'results': all_results
         })

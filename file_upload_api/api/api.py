@@ -1,3 +1,5 @@
+import os
+import uuid
 import json
 import aiofiles
 from typing import List, Dict
@@ -7,8 +9,6 @@ from logs.logger import logger
 from fastapi.responses import JSONResponse
 from models.file_info import FileInfo
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Form, Body
-import uuid
-import os
 
 upload_router = APIRouter()
 data_router = APIRouter()
@@ -18,7 +18,6 @@ ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat', '.mp4', '
 BUFFER_SIZE = 100 
 file_info_buffer = []
 
-# Store upload metadata
 active_uploads: Dict[str, dict] = {}
 
 def is_valid_extension(filename: str) -> bool:
@@ -43,12 +42,10 @@ async def save_file_info(file_info: FileInfo):
 
 
 def get_optimal_chunk_size(file_size: int) -> int:
-    """
-    Determine optimal chunk size based on file size
-    """
-    MIN_CHUNK = 5 * 1024 * 1024    # 5MB
-    MAX_CHUNK = 20 * 1024 * 1024   # 20MB
-    DEFAULT_CHUNK = 8 * 1024 * 1024  # 8MB for files where size can't be determined
+
+    MIN_CHUNK = 5 * 1024 * 1024    
+    MAX_CHUNK = 20 * 1024 * 1024   
+    DEFAULT_CHUNK = 8 * 1024 * 1024  
     
     if not file_size:
         return DEFAULT_CHUNK
@@ -58,7 +55,6 @@ def get_optimal_chunk_size(file_size: int) -> int:
     elif file_size >= 8 * 1024 * 1024 * 1024:  # 8GB
         return MAX_CHUNK
     else:
-        # Scale chunk size between min and max based on file size
         return min(MAX_CHUNK, max(MIN_CHUNK, file_size // 500))
 
 
@@ -74,7 +70,6 @@ async def upload_file(
     try:
         start_time = datetime.now()
         
-        # Set default values if not provided
         if timestamp is None:
             timestamp = start_time.strftime("%Y%m%d_%H%M%S")
         if client_id is None:
@@ -91,16 +86,15 @@ async def upload_file(
                 detail=f"File type not allowed. Allowed types: {ALLOWED_EXTENSIONS}"
             )
 
-        # Get file size if possible
         try:
-            file_size = file.size  # Some upload handlers provide this
+            file_size = file.size  
         except AttributeError:
-            file_size = 0  # Will use default chunk size
+            file_size = 0  
             logger.warning("Could not determine file size, using default chunk size")
 
         chunk_size = get_optimal_chunk_size(file_size)
         
-        # Unique filename 
+
         safe_filename = f"{timestamp}_{file.filename}"
         file_path = UPLOAD_DIR / safe_filename
 
@@ -135,7 +129,6 @@ async def upload_file(
 
 @data_router.get("/", response_model=List[FileInfo])
 async def list_files():
-
     try:
         files = []
         index_path = UPLOAD_DIR / "file_index.json"
@@ -153,11 +146,6 @@ async def list_files():
         raise HTTPException(status_code=500, detail="Failed to retrieve file list")
 
 
-@data_router.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-
 @upload_router.post("/init")
 async def initialize_upload(upload_info: dict = Body(...)):
     upload_id = str(uuid.uuid4())
@@ -171,8 +159,7 @@ async def initialize_upload(upload_info: dict = Body(...)):
         'temp_dir': temp_dir,
         'client_id': upload_info['client_id'],
         'timestamp': upload_info['timestamp'],
-        'file_creation_time': upload_info['file_creation_time'],
-        'creation_duration': upload_info['creation_duration']
+        'file_creation_time': upload_info['file_creation_time']
     }
     
     return {"upload_id": upload_id}
@@ -208,28 +195,25 @@ async def finalize_upload(
     upload_info = active_uploads[upload_id]
     final_path = UPLOAD_DIR / upload_info['filename']
     
-    # Combine chunks
     async with aiofiles.open(final_path, 'wb') as final_file:
         chunk_files = sorted(upload_info['temp_dir'].glob("chunk_*"))
         for chunk_path in chunk_files:
             async with aiofiles.open(chunk_path, 'rb') as chunk_file:
                 await final_file.write(await chunk_file.read())
     
-    # Clean up temp directory
     for chunk_file in chunk_files:
         os.remove(chunk_file)
     os.rmdir(upload_info['temp_dir'])
     
-    # Create file info
     file_info = FileInfo(
         filename=upload_info['filename'],
         size=os.path.getsize(final_path),
         storage_location=str(final_path),
         upload_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        upload_duration=0,  # Calculate if needed
+        upload_duration=upload_data.get('upload_duration', 0),
         file_creation_time=upload_info['file_creation_time'],
-        creation_duration=upload_info['creation_duration'],
-        client_id=upload_info['client_id']  # Add client_id to file info
+        client_id=upload_info['client_id'],
+        creation_duration=upload_data.get('creation_duration', 0)
     )
     
     background_tasks.add_task(save_file_info, file_info)
