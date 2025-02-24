@@ -1,8 +1,8 @@
 from pathlib import Path
 from fastapi import FastAPI
-from logs.logger import logger
+from file_upload_api.logs.logger import logger
 from contextlib import asynccontextmanager
-from api.api import upload_router, data_router  
+from file_upload_api.api.api import upload_router, data_router
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -45,8 +45,11 @@ app.include_router(data_router, prefix="/api/data", tags=["data"])
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    # Change working directory to parent of file_upload_api
+    os.chdir(os.path.dirname(os.path.dirname(__file__)))
     uvicorn.run(
-        "main:app",
+        "file_upload_api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True
