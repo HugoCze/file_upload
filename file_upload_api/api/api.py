@@ -12,7 +12,7 @@ upload_router = APIRouter()
 data_router = APIRouter()
 
 UPLOAD_DIR = Path("storage")
-ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat'}
+ALLOWED_EXTENSIONS = {'.txt', '.pdf', '.doc', '.docx', '.csv', '.dat', '.mp4', '.wav'}
 BUFFER_SIZE = 100 
 file_info_buffer = []
 

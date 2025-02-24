@@ -20,13 +20,11 @@ def perform_upload():
     api_url = os.getenv('API_URL', 'http://api:8000')
     
     try:
-        # Generate a 1MB file and measure creation time
         creation_start = time.time()
         filepath = file_generator.create_file(size_mb=1)
         creation_duration = round(time.time() - creation_start, 2)
         creation_time = time.strftime("%Y-%m-%d %H:%M:%S")
         
-        # Prepare the multipart form data
         files = {
             'file': open(filepath, 'rb')
         }
