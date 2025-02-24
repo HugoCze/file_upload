@@ -18,7 +18,7 @@ class FileGenerator:
         logger.info(f"Initialized FileGenerator with output directory: {output_dir}")
         
 
-    def create_file(self, filename=None, min_size_gb=4, max_size_gb=5):
+    def create_file(self, filename=None, min_size_gb=4, max_size_gb=8):
         size_gb = random.uniform(min_size_gb, max_size_gb)
         size_bytes = int(size_gb * 1024 * 1024 * 1024)  
         
