@@ -9,3 +9,5 @@ class FileInfo(BaseModel):
     storage_location: str
     upload_date: str
     upload_duration: float
+    file_creation_time: str
+    creation_duration: float

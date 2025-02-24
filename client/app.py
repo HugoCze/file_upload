@@ -20,8 +20,11 @@ def perform_upload():
     api_url = os.getenv('API_URL', 'http://api:8000')
     
     try:
-        # Generate a 1MB file
+        # Generate a 1MB file and measure creation time
+        creation_start = time.time()
         filepath = file_generator.create_file(size_mb=1)
+        creation_duration = round(time.time() - creation_start, 2)
+        creation_time = time.strftime("%Y-%m-%d %H:%M:%S")
         
         # Prepare the multipart form data
         files = {
@@ -29,7 +32,9 @@ def perform_upload():
         }
         data = {
             'client_id': container_id,
-            'timestamp': str(time.time())
+            'timestamp': str(time.time()),
+            'file_creation_time': creation_time,
+            'creation_duration': creation_duration
         }
         
         response = requests.post(
@@ -56,21 +61,22 @@ def perform_upload():
             'error': str(e)
         }
 
+
 @app.route('/trigger-upload')
 def trigger_upload():
     return perform_upload()
 
+
 @app.route('/trigger-all')
 def trigger_all_containers():
     try:
-        # Use DNS to get all IPs for the client service
         ips = socket.getaddrinfo('client', 5000, socket.AF_INET, socket.SOCK_STREAM)
         
         def trigger_container(ip):
             try:
-                time.sleep(0.1 * random.random())  # Small random delay to prevent thundering herd
+                time.sleep(0.1 * random.random()) 
                 container_url = f"http://{ip[4][0]}:5000/trigger-upload"
-                response = requests.get(container_url)
+                response = requests.get(container_url, params={'client_id': get_container_id()})
                 print(f"Triggered upload on {ip[4][0]}: {response.status_code}")
             except Exception as e:
                 print(f"Error triggering container at {ip[4][0]}: {str(e)}")

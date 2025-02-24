@@ -32,7 +32,7 @@ async def flush_buffer():
 async def save_file_info(file_info: FileInfo):
     global file_info_buffer
     
-    file_info_buffer.append(json.dumps(file_info.dict()))
+    file_info_buffer.append(json.dumps(file_info.model_dump()))
     
     if len(file_info_buffer) >= BUFFER_SIZE:
         await flush_buffer()
@@ -63,6 +63,8 @@ async def upload_file(
     file: UploadFile = File(...),
     client_id: str = Form(None),
     timestamp: str = Form(None),
+    file_creation_time: str = Form(None),
+    creation_duration: float = Form(None),
     background_tasks: BackgroundTasks = None
 ):
     try:
@@ -73,6 +75,10 @@ async def upload_file(
             timestamp = start_time.strftime("%Y%m%d_%H%M%S")
         if client_id is None:
             client_id = "default_client"
+        if file_creation_time is None:
+            file_creation_time = start_time.strftime("%Y-%m-%d %H:%M:%S")
+        if creation_duration is None:
+            creation_duration = 0.0
 
         if not is_valid_extension(file.filename):
             logger.error(f"Invalid file extension: {file.filename}")
@@ -105,15 +111,17 @@ async def upload_file(
             size=file_path.stat().st_size,
             storage_location=str(file_path),
             upload_date=start_time.strftime("%Y-%m-%d %H:%M:%S"),
-            upload_duration=round(upload_duration, 2)  # Duration in seconds, rounded to 2 decimal places
+            upload_duration=round(upload_duration, 2),
+            file_creation_time=file_creation_time,
+            creation_duration=creation_duration
         )
 
         background_tasks.add_task(save_file_info, file_info)
-        background_tasks.add_task(flush_buffer)  # Ensure data is written even if buffer isn't full
+        background_tasks.add_task(flush_buffer) 
 
         return JSONResponse(
             status_code=201,
-            content={"message": "File uploaded successfully", "file_info": file_info.dict()}
+            content={"message": "File uploaded successfully", "file_info": file_info.model_dump()}
         )
 
     except Exception as e:
