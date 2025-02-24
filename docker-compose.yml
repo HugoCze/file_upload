@@ -22,17 +22,13 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
-    sysctls:
-      - net.ipv4.tcp_keepalive_time=60
-      - net.ipv4.tcp_keepalive_intvl=10
-      - net.ipv4.tcp_keepalive_probes=6
 
   client:
     build:
       context: .
       dockerfile: client/Dockerfile
     ports:
-      - "5000-5005:5000"
+      - "9000-9005:5000"
     networks:
       - upload_network
     environment:
