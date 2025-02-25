@@ -17,3 +17,5 @@ Thumbs.db
 storage/
 *.log 
 /storage
+/test_env
+/test.requirements.txt

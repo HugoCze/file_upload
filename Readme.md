@@ -1,4 +1,4 @@
- Usage Instructions:
+Usage Instructions:
 
 1. Start the services with multiple client instances:
    docker compose up --scale client=6
@@ -40,6 +40,13 @@ You can monitor the progress in the docker compose logs to see the concurrent up
    http://localhost:8000/api/data/
 
 5. Run tests:
+   First, create and activate a test environment:
+   ```
+   python -m venv test_env
+   unix source test_env/bin/activate or win: test_env\Scripts\activate
+   pip install -r test.requirements.txt
+   ```
+
    To run the health check tests, execute:
    pytest tests/test_health.py
 
@@ -49,5 +56,6 @@ You can monitor the progress in the docker compose logs to see the concurrent up
    - File extension validation (blocked: py, jpg, exe, zip)
    - Data endpoint structure and schema validation
    
-
    Make sure both services are running before executing the tests.
+   
+   Note: Run the tests locally from your machine, not from within the containers.
