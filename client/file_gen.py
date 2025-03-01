@@ -13,7 +13,6 @@ class FileGenerator:
         self.output_dir = output_dir
         self.extensions = ['.txt', '.pdf', '.doc',
          '.docx', '.csv', '.dat', '.mp4', '.wav']
-
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Initialized FileGenerator with output directory: {output_dir}")
         

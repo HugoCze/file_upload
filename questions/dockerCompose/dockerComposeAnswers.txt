@@ -1,0 +1,60 @@
+
+
+networks - Lets us to define shared network for our services. 
+    A specially usefull for security where some services can be access only from inside that network and not publicy avaialble. 
+    Each service in our network called upload_network has been given a DNS name that machtes the service name like api, client and nginx.
+
+
+
+ipam(IP address management) - sets the subnet for services in the same netwrok and ensures that IP addresses are within the defined range.
+
+CIDR Notation(Classless Inter-Domain Routing) - The /16 is a CIDR  notation. It specifies the size of the subnet:
+    /16 means the first 16 bits of the IP address are fixed (e.g., 172.28), and the remaining 16 bits can vary.
+    This allows for 65,534 usable IP addresses in the subnet (from 172.28.0.1 to 172.28.255.254).
+    Used Example:
+        networks:
+            upload_network:
+                    driver: bridge
+                    ipam:
+                        driver: default
+                        config:
+                            - subnet: 172.28.0.0/16
+
+
+bridge - Driver that allows containers on the same host to communicate with each other. 
+
+ports - ports directive is used to map ports form the host machine to the container.
+    This makes continer ports accessible from outside the Docker network(from the local machine or the external systems)
+    Host-Continer Mapping - mapes a port on the host machine to a port on the container.
+    External Access - Allows external sustem to access the container's servies.
+    Range support - specifies the range 5000-5005:5000-5005 with <host-port>:<container-port>
+
+
+expose - expose directive lets us specify ports that continer will listen on internally.
+    These ports are not mapped to the host machine and are only accessible to other services within the same Docker network.
+    Internal Access only - Ports avaialble only to other container in docker network(upload_network)
+    No Host Mapping - It does not map ports to a host machine. Making it impossible to be accessed externally.
+    Explenation - The client service exposes port 5000 internally. Other services in the same Docker network (e.g., nginx) 
+        can access this port using the service name (e.g., http://client:5000).
+        However, this port is not accessible from the host machine or external systems.
+
+
+restart - no: The container will not be restarted automatically. This is the default behavior.
+    always: The container will always be restarted, regardless of the exit code.
+    on-failure: The container will be restarted only if it exits with a non-zero exit code (indicating an error).
+    unless-stopped: The container will be restarted unless it is explicitly stopped by the user (e.g., using docker-compose down or docker stop).
+    
+
+resources:
+limits - specifies the max of Ram of cpu usage that container can use. 
+    If the container exceeds it, it will be termianted/killed with "out of memory" error by docker daemon. 
+
+reservations - specifies the max amount of ram of cpu that is reserved for the container. 
+    Docker ensurres that the container has at least this amount of ram of cpu avaiable. 
+    If the host system is under high demand, docker iwll prioritize containers with reservations. 
+
+Rolling Updates - A deployment strategy where new versions of a service are gradually rolled out, replacing old instances one by one.
+     This ensures that the service remains available during the update process.
+
+ZeroDowntime Deployments - A deployment strategy where the application remains fully operational and accessible to users during the update process.
+    No downtime or service interruption occurs.
