@@ -1,0 +1,170 @@
+# Technical Summary: Key Modules and Implementations
+
+## FastAPI Implementation
+
+### Core FastAPI Features
+- **APIRouter**: Modular routing with separate routers for uploads, data, and health checks
+  - `upload_router` handles file uploads, chunk processing, and upload finalization
+  - `data_router` manages file listing and metadata retrieval
+  - `health_router` provides system health status endpoints
+
+- **Background Tasks**: Non-blocking operations for file processing
+  ```python
+  background_tasks.add_task(save_file_info, file_info)
+  background_tasks.add_task(flush_buffer)
+  ```
+
+- **Pydantic Models**: Data validation and type checking
+  ```python
+  class FilenameCheck(BaseModel):
+      filename: str
+  ```
+
+- **Request Validation**: Form and File handling with built-in validation
+  ```python
+  async def upload_file(
+      file: UploadFile = File(...),
+      client_id: str = Form(None),
+      timestamp: str = Form(None)
+  )
+  ```
+
+- **ASGI Server**: Using uvicorn for high-performance async operation
+  ```python
+  uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+  ```
+
+- **Application Lifecycle Management**: Using asynccontextmanager
+  ```python
+  @asynccontextmanager
+  async def lifespan(app: FastAPI):
+      UPLOAD_DIR.mkdir(exist_ok=True)
+      yield
+      logger.info("Shutting down application")
+  ```
+
+## File Handling and Chunking
+
+### Chunked Upload Strategy
+- **Three-phase Upload Process**:
+  1. Initialization: Creates upload ID and reserves storage
+  2. Chunk Upload: Processes file in manageable chunks
+  3. Finalization: Assembles chunks into complete file
+
+- **Dynamic Chunk Sizing**:
+  ```python
+  def get_optimal_chunk_size(file_size: int) -> int:
+      MIN_CHUNK = 5 * 1024 * 1024    
+      MAX_CHUNK = 20 * 1024 * 1024   
+      # Scale chunk size based on file size
+      return min(MAX_CHUNK, max(MIN_CHUNK, file_size // 500))
+  ```
+
+- **Asynchronous File Operations** with aiofiles:
+  ```python
+  async with aiofiles.open(file_path, 'wb', buffering=8192) as f:
+      while chunk := await file.read(chunk_size):
+          await f.write(chunk)
+  ```
+
+### Sparse File Creation
+- **Efficient Large File Generation** using seek():
+  ```python
+  with open(filepath, 'wb') as f:
+      f.seek(size_bytes - 1)
+      f.write(b'\0')
+  ```
+  This creates files that appear large but use minimal disk space by writing only at the end position.
+
+## Concurrency and Networking
+
+### ThreadPoolExecutor for Parallel Operations
+- **Concurrent Container Triggering**:
+  ```python
+  with ThreadPoolExecutor(max_workers=6) as executor:
+      futures = [
+          executor.submit(trigger_single_container, url, name, timeout)
+          for url, name in container_urls
+      ]
+      results = [future.result() for future in futures]
+  ```
+  Enables parallel API calls to multiple containers, reducing overall execution time.
+
+### Socket Module for Network Operations
+- **Container Identification**:
+  ```python
+  def get_container_id():
+      return socket.gethostname()
+  ```
+
+- **Network Availability Checking**:
+  ```python
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  try:
+      sock.bind(('0.0.0.0', 5000))
+      sock.close()
+      logger.info("Port 5000 is available")
+  except socket.error as e:
+      logger.error(f"Port 5000 is not available: {str(e)}")
+      sys.exit(1)
+  ```
+  Ensures services only start when ports are available.
+
+## Resilience and Error Handling
+
+### HTTP Retry Strategy
+- **Exponential Backoff Implementation**:
+  ```python
+  retry_strategy = Retry(
+      total=int(os.getenv('MAX_RETRIES', 3)),
+      backoff_factor=float(os.getenv('RETRY_BACKOFF', 5)),
+      status_forcelist=[429, 500, 502, 503, 504],
+  )
+  session = requests.Session()
+  adapter = HTTPAdapter(max_retries=retry_strategy)
+  session.mount("http://", adapter)
+  ```
+  Automatically retries failed requests with increasing delays.
+
+### Metadata Buffering
+- **Buffered Write Operations**:
+  ```python
+  async def save_file_info(file_info: FileInfo):
+      global file_info_buffer
+      file_info_buffer.append(json.dumps(file_info.dict()))
+      if len(file_info_buffer) >= BUFFER_SIZE:
+          await flush_buffer()
+  ```
+  Reduces I/O operations by batching metadata writes.
+
+## Questions and Answers
+
+### FastAPI Implementation
+**Q: Why did you choose FastAPI over Flask for the API service?**  
+A: FastAPI provides automatic validation, async support, and better performance for I/O-bound operations like file uploads. Its built-in validation using Pydantic reduces code complexity, while async support with uvicorn enables higher throughput when handling multiple concurrent uploads.
+
+**Q: Explain your approach to handling large file uploads. Why implement a chunked upload strategy?**  
+A: The chunked approach solves multiple problems: it prevents timeouts on large uploads, allows for resumable uploads if interrupted, reduces memory usage on both client and server, and enables better progress tracking. The three-phase process (init, chunk, finalize) provides transaction-like semantics for uploads.
+
+### File Operations
+**Q: How does your sparse file creation work, and what are its limitations?**  
+A: The sparse file technique uses `seek()` to position at the end of the desired file size and writes a single byte, creating a file that appears large but consumes minimal disk space. While efficient for testing throughput and upload mechanics, it doesn't test real-world compression or deduplication scenarios and creates unrealistic network patterns since we're not transferring the full data volume.
+
+**Q: Why did you implement a buffer for file metadata storage?**  
+A: The buffer aggregates multiple metadata writes into batch operations, reducing I/O overhead and filesystem contention. This is particularly important in high-concurrency scenarios where many clients are completing uploads simultaneously, as it prevents performance degradation from frequent small writes.
+
+### Concurrency and Networking
+**Q: How does ThreadPoolExecutor improve your system's performance?**  
+A: Using ThreadPoolExecutor allows for parallel execution of requests to multiple client containers, dramatically reducing the time needed to trigger all clients. Since these are I/O-bound operations (HTTP requests), threads provide an efficient concurrency model without the complexity of async code.
+
+**Q: Explain your use of the socket module for container identification.**  
+A: The socket module provides a reliable way to get the container's hostname, which serves as a unique identifier in the Docker environment. This is crucial for tracking which container generated and uploaded which files, enabling better monitoring and troubleshooting in the distributed system.
+
+### Architecture and Design
+**Q: Explain how your dynamic chunk size calculation improves performance.**  
+A: By scaling chunk size based on file size (using a 1:500 ratio), we balance several competing factors: larger chunks reduce HTTP overhead and improve throughput, while smaller chunks reduce memory usage and provide more frequent progress updates. The algorithm ensures optimal performance across a range of file sizes from megabytes to gigabytes.
+
+**Q: How does your system handle concurrent uploads from multiple clients?**  
+A: Each upload gets a unique UUID and isolated temporary storage for chunks, preventing conflicts between uploads. The metadata buffer system handles concurrent completions, while FastAPI's async design allows it to process multiple requests simultaneously. The architecture is stateless where possible, making it horizontally scalable.
+
+This technical summary covers the key modules, implementation strategies, and technical decisions in your project, focusing on FastAPI features, file operations, concurrency patterns, and network handling.
