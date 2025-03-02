@@ -1,0 +1,117 @@
+Got it! Based on the provided Python client architecture (`app.py` and `file_gen.py`), I’ll design **more specific and detailed questions** that focus on the **code implementation**, **specific classes/functions**, and **how to modify or replace parts of the code**. These questions will help you dive deeper into the architecture and understand the inner workings of the code.
+
+---
+
+### **1. Questions About Specific Classes and Functions**
+
+#### **a. `ThreadPoolExecutor`**
+1. **How does the `ThreadPoolExecutor` class work in the `trigger_all_containers` function?**
+2. **What is the purpose of using `ThreadPoolExecutor` instead of a single-threaded approach?**
+3. **How would you modify the `trigger_all_containers` function to use `ProcessPoolExecutor` instead of `ThreadPoolExecutor`? What are the trade-offs?**
+4. **What happens if one of the threads in the `ThreadPoolExecutor` fails? How would you handle such failures?**
+5. **How would you limit the number of concurrent threads in the `ThreadPoolExecutor` to avoid overwhelming the system?**
+
+#### **b. `HTTPAdapter` and `requests.Session`**
+6. **What is the purpose of the `HTTPAdapter` class in the `requests` library?**
+7. **How does the `session.mount("http://", adapter)` line work, and why is it necessary?**
+8. **What is the role of the `Retry` class in the `retry_strategy`, and how does it improve the reliability of HTTP requests?**
+9. **How would you modify the `retry_strategy` to handle different types of HTTP errors (e.g., 404, 403)?**
+10. **What are the advantages of using `requests.Session()` over making individual HTTP requests with `requests.get()` or `requests.post()`?**
+
+#### **c. `socket`**
+11. **What is the purpose of the `socket` module in the `get_container_id` function?**
+12. **How does `socket.gethostname()` work, and why is it used to identify the container?**
+13. **What would happen if `socket.gethostbyname(socket.gethostname())` fails? How would you handle this error?**
+14. **How would you replace the `socket` module with a different method to get the container ID (e.g., using environment variables)?**
+
+---
+
+### **2. Questions About Code Implementation**
+
+#### **a. File Upload Logic**
+15. **How does the `create_and_upload_file` function handle file uploads in chunks? Why is chunking necessary?**
+16. **What would happen if the `api` service fails during a chunked upload? How would you modify the code to resume the upload from the last successful chunk?**
+17. **How would you modify the `create_and_upload_file` function to upload files to a cloud storage service (e.g., AWS S3) instead of the `api` service?**
+18. **What changes would you make to the `create_and_upload_file` function to support parallel uploads of multiple chunks?**
+19. **How would you add a progress bar to track the file upload progress in the `create_and_upload_file` function?**
+
+#### **b. File Generation**
+20. **How does the `FileGenerator` class create large files efficiently using `f.seek(size_bytes - 1)`?**
+21. **What would happen if the `output_dir` directory does not exist? How does the `os.makedirs(output_dir, exist_ok=True)` line handle this?**
+22. **How would you modify the `FileGenerator` class to generate files with random content instead of empty files?**
+23. **What changes would you make to the `FileGenerator` class to support generating files of specific formats (e.g., CSV, JSON)?**
+24. **How would you handle disk space exhaustion during file generation in the `FileGenerator` class?**
+
+---
+
+### **3. Questions About Error Handling and Logging**
+
+25. **How does the `logger` object work in the `app.py` and `file_gen.py` files? What logging level is used, and how would you change it?**
+26. **What would happen if the `api` service returns a 500 error during file upload? How does the `retry_strategy` handle this?**
+27. **How would you modify the error handling in the `create_and_upload_file` function to log detailed error messages (e.g., stack traces)?**
+28. **What changes would you make to the `trigger_all_containers` function to log the status of each container's upload process?**
+29. **How would you implement a retry mechanism for file generation in the `FileGenerator` class if the initial attempt fails?**
+
+---
+
+### **4. Questions About Performance and Optimization**
+
+30. **How would you optimize the `create_and_upload_file` function to reduce memory usage during chunked uploads?**
+31. **What changes would you make to the `FileGenerator` class to generate files faster (e.g., using memory-mapped files)?**
+32. **How would you implement a caching mechanism in the `client` service to avoid redundant file generation?**
+33. **What would you do to improve the performance of the `trigger_all_containers` function when dealing with a large number of containers?**
+34. **How would you handle rate limiting in the `client` service to avoid overwhelming the `api` service?**
+
+---
+
+### **5. Questions About Testing and Debugging**
+
+35. **How would you write unit tests for the `FileGenerator` class to ensure it generates files correctly?**
+36. **What tools or techniques would you use to test the `create_and_upload_file` function's interaction with the `api` service?**
+37. **How would you simulate network failures or high latency to test the retry mechanism in the `client` service?**
+38. **What logging improvements would you make to help debug issues in the `client` service?**
+39. **How would you monitor the performance of the `client` service in a production environment?**
+
+---
+
+### **6. Questions About Security**
+
+40. **How would you secure the communication between the `client` and `api` services (e.g., using HTTPS)?**
+41. **What changes would you make to the `client` service to authenticate requests to the `api` service?**
+42. **How would you prevent unauthorized access to the `trigger_all_containers` endpoint?**
+43. **What security risks are associated with generating and uploading large files, and how would you mitigate them?**
+44. **How would you ensure that the `client` service does not consume excessive resources (e.g., memory, CPU) during file generation and upload?**
+
+---
+
+### **7. Advanced Questions**
+
+45. **How would you implement a feature to resume interrupted file uploads in the `client` service?**
+46. **What changes would you make to the `client` service to support parallel uploads of multiple files?**
+47. **How would you integrate the `client` service with a message queue (e.g., RabbitMQ, Kafka) to handle upload requests asynchronously?**
+48. **What changes would you make to the `client` service to support uploading files to cloud storage (e.g., AWS S3, Google Cloud Storage)?**
+49. **How would you implement a feature to validate the integrity of uploaded files (e.g., using checksums) in the `client` service?**
+
+---
+
+### **8. Code Replacement and Refactoring Questions**
+
+50. **How would you replace the `ThreadPoolExecutor` with an asynchronous approach (e.g., using `asyncio`) in the `trigger_all_containers` function?**
+51. **What changes would you make to the `FileGenerator` class to use a different file generation method (e.g., generating files with random data)?**
+52. **How would you refactor the `create_and_upload_file` function to make it more modular and reusable?**
+53. **What changes would you make to the `client` service to use a different HTTP client library (e.g., `aiohttp` instead of `requests`)?**
+54. **How would you replace the `Flask` framework with a different web framework (e.g., FastAPI) in the `client` service?**
+
+---
+
+### **9. Scenario-Based Questions**
+
+55. **If the `api` service becomes unavailable, how would you modify the `client` service to handle this gracefully?**
+56. **How would you handle a scenario where the `client` service runs out of disk space during file generation?**
+57. **What would you do if the `client` service receives a large number of upload requests simultaneously?**
+58. **How would you handle a scenario where the `api` service returns inconsistent responses (e.g., partial success or failure)?**
+59. **What changes would you make to the `client` service to support uploading files from external sources (e.g., URLs or cloud storage)?**
+
+---
+
+These questions are designed to test your understanding of the **code implementation**, **specific components**, and **how to modify or replace parts of the code**. They also cover **scenarios**, **optimization**, and **debugging**, making them ideal for an in-depth technical interview. Let me know if you'd like detailed answers or explanations for any of these questions! 😊

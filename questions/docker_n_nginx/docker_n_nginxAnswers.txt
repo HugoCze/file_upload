@@ -116,6 +116,7 @@ nginx ssl/tls - requierments would be certificate.crt or and the private.key fil
             }
         }
 
+
 rate limiting - is a technique used to control the amount of requests that can be made to a server in certain time period.
     ngx_http_limit_req_module - is a module to implement rate limiting.
     limit_req_zone - creates a shared memory zone to store the requests information.
@@ -126,3 +127,7 @@ rate limiting - is a technique used to control the amount of requests that can b
             }
 
             
+events - events block is used to configure how Nginx handles connections at low level.
+    worker_processes - sets the number of worker processes that Nginx will spawn.
+    worker_connections 1024; - sets the maximum number of simultaneous connections that can be handled by a single worker process.
+

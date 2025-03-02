@@ -1,0 +1,94 @@
+Got it! Let’s focus on **FastAPI-specific concepts** and **asynchronous file handling** (`aiofiles`) and **context management** (`asynccontextmanager`). These questions will dive deeper into the **FastAPI framework**, its components, and how they are used in the provided code.
+
+---
+
+### **1. Questions About FastAPI Components**
+
+#### **a. `APIRouter`**
+1. **What is the purpose of the `APIRouter` class in FastAPI, and how is it used in the `api.py` file?**
+2. **How does the `prefix` parameter in `APIRouter` affect the API endpoints?**
+3. **What are the benefits of using multiple routers (e.g., `upload_router`, `data_router`, `health_router`) in a FastAPI application?**
+4. **How would you modify the `upload_router` to add a new endpoint for deleting uploaded files?**
+5. **What is the role of the `tags` parameter in `APIRouter`, and how does it affect the API documentation?**
+
+#### **b. `UploadFile` and `File`**
+6. **What is the purpose of the `UploadFile` class in FastAPI, and how is it used in the `upload_file` function?**
+7. **How does the `File` dependency work in FastAPI, and why is it used in the `upload_file` function?**
+8. **What are the advantages of using `UploadFile` over directly reading the file content in the request body?**
+9. **How would you modify the `upload_file` function to handle multiple file uploads simultaneously?**
+10. **What happens if the `UploadFile` object is not properly closed after reading? How would you handle this?**
+
+#### **c. `HTTPException`**
+11. **What is the purpose of the `HTTPException` class in FastAPI, and how is it used in the `api.py` file?**
+12. **How would you customize the error message and status code in an `HTTPException`?**
+13. **What are the differences between raising an `HTTPException` and returning a `JSONResponse` with an error message?**
+14. **How would you handle validation errors (e.g., invalid file extensions) using `HTTPException`?**
+15. **What changes would you make to the `upload_file` function to return a custom error response for specific types of failures?**
+
+#### **d. `BackgroundTasks`**
+16. **What is the purpose of the `BackgroundTasks` class in FastAPI, and how is it used in the `upload_file` function?**
+17. **How does the `BackgroundTasks` parameter improve the performance of the `upload_file` function?**
+18. **What are the limitations of using `BackgroundTasks` in FastAPI, and how would you handle long-running background tasks?**
+19. **How would you modify the `upload_file` function to run multiple background tasks simultaneously?**
+20. **What changes would you make to the `BackgroundTasks` logic to handle task failures gracefully?**
+
+#### **e. `Form` and `Body`**
+21. **What is the purpose of the `Form` dependency in FastAPI, and how is it used in the `upload_file` function?**
+22. **How does the `Body` dependency work in FastAPI, and why is it used in the `initialize_upload` function?**
+23. **What are the differences between using `Form` and `Body` in FastAPI?**
+24. **How would you modify the `upload_file` function to accept additional metadata (e.g., tags, description) using `Form`?**
+25. **What changes would you make to the `initialize_upload` function to validate the request body using Pydantic models?**
+
+---
+
+### **2. Questions About `aiofiles`**
+
+26. **What is the purpose of the `aiofiles` module, and how is it used in the `api.py` file?**
+27. **How does `aiofiles.open` differ from Python's built-in `open` function, and why is it necessary for asynchronous file handling?**
+28. **What are the advantages of using `aiofiles` for file I/O in an asynchronous FastAPI application?**
+29. **How would you modify the `upload_file` function to use `aiofiles` for reading and writing files in chunks?**
+30. **What changes would you make to the `aiofiles` logic to handle file I/O errors (e.g., disk full, permission denied)?**
+
+---
+
+### **3. Questions About `asynccontextmanager`**
+
+31. **What is the purpose of the `asynccontextmanager` decorator, and how is it used in the `main.py` file?**
+32. **How does the `lifespan` function work in FastAPI, and why is it necessary for managing application state?**
+33. **What are the benefits of using `asynccontextmanager` over a regular context manager in an asynchronous application?**
+34. **How would you modify the `lifespan` function to perform additional startup tasks (e.g., connecting to a database)?**
+35. **What changes would you make to the `lifespan` function to handle cleanup tasks (e.g., closing database connections) during application shutdown?**
+
+---
+
+### **4. Advanced Questions**
+
+36. **How would you implement a feature to resume interrupted file uploads using FastAPI and `aiofiles`?**
+37. **What changes would you make to the `upload_file` function to support parallel uploads of multiple chunks using `aiofiles`?**
+38. **How would you integrate the `BackgroundTasks` feature with a message queue (e.g., RabbitMQ, Kafka) for asynchronous task processing?**
+39. **What changes would you make to the `upload_file` function to upload files to cloud storage (e.g., AWS S3) using `aiofiles`?**
+40. **How would you implement a feature to validate the integrity of uploaded files (e.g., using checksums) in the `upload_file` function?**
+
+---
+
+### **5. Scenario-Based Questions**
+
+41. **If the `upload_file` function fails during file upload, how would you modify the error handling to retry the upload automatically?**
+42. **How would you handle a scenario where the API runs out of disk space during file upload using `aiofiles`?**
+43. **What would you do if the `BackgroundTasks` feature fails to execute a task (e.g., saving file metadata)? How would you handle this gracefully?**
+44. **How would you handle a scenario where the API receives a large number of upload requests simultaneously using `aiofiles` and `BackgroundTasks`?**
+45. **What changes would you make to the `upload_file` function to support uploading files from external sources (e.g., URLs) using `aiofiles`?**
+
+---
+
+### **6. Code Replacement and Refactoring Questions**
+
+46. **How would you replace the `aiofiles` module with a different asynchronous file handling library (e.g., `trio`)?**
+47. **What changes would you make to the `upload_file` function to use a different HTTP framework (e.g., `aiohttp` instead of FastAPI)?**
+48. **How would you refactor the `upload_file` function to make it more modular and reusable using `aiofiles`?**
+49. **What changes would you make to the API to use a different storage backend (e.g., a database instead of local storage) with `aiofiles`?**
+50. **How would you replace the `asynccontextmanager` decorator with a custom asynchronous context manager?**
+
+---
+
+These questions are designed to test your understanding of **FastAPI-specific components**, **asynchronous file handling**, and **context management**. They also cover **scenarios**, **optimization**, and **debugging**, making them ideal for an in-depth technical interview. Let me know if you'd like detailed answers or explanations for any of these questions! 😊
