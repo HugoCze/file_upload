@@ -1,0 +1,128 @@
+
+PYTHONUNBUFFERED - Helps to mange python application logs by disabling buffering. Without this log might not appear
+    in Dockercontiner's out put untill the buffer is full oir process ends. 
+
+PYTHONPATH - Tells python where to find modules and packages in its module search path.
+    It also insures that python can find the modules and packages in the project.
+
+-X dev flag - Enables python development mode, which provides addtional runtime check and warning to help with debug. 
+    Like for example: Enhanced wanrnings, debugging hooks, resource warnings and faulthandler.
+
+Nginx role - Acts as LoadBalander, revesed proxy. An entry point for external traffic that forwards requests to the client serivce.
+    For the multiple instances of client service, NGINX can distribure incoming requests acrosstehm. 
+    `upstream`  - block deifnes the backend servers.
+    It listens on 5000-5005.
+    proxy_pass - tells NGINX to forward requests to the client serice.
+    proxy_set_header - ensures that the client service recieves important information about the orginal request.
+
+nginx mounted as a volume - Allows for dynamic configuration without restarting the NGINX container.
+    Changes to the NGINX configuration file are reflected immediately.
+    It also allows for easy updates to the configuration by mounting a new version of the file without downtime.
+
+    volumes:
+        - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    
+    If the nginx.conf is not mounted as a volume the nginx continer will use its defualt configuration instead 
+    of the one provided in the project. 
+
+
+volumes - volumes are the mechanism for persisting data and sharing file between host machine and docker containers.
+    Any data saved to container will be lost when container is removed. Volumes lets us save the data else where.
+    Volumes are also used to for read and write operations and are more efficent then bind mounts.
+    The difference between bind mount and volumes - 
+        Bind mount - Directories on the host machine are mounted into the container.
+        Volumes - Special type of docker object that manages storage outside of the container's life cycle.
+    static files - by implemeting static we can make sure that the files are served from the volume instead of the container.
+        Example:
+              volumes:
+                - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # path to the nginx config file
+                - ./client/static:/usr/share/nginx/html:ro  # Mount the static files directory
+
+more client instance - we can cuse docker compose --scale flag. Or use the deploy section in docker compose file and 
+    specify X replicas.
+    The nginx config will look like:
+        upstream client_servers {
+            server client1:5000;
+            server client2:5000;
+            server client3:5000;
+        }
+
+
+
+nginx ssl/tls - requierments would be certificate.crt or and the private.key files.
+    example docker compose -
+        nginx:
+            image: nginx:latest
+            volumes:
+                - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+                - ./ssl/certificate.crt:/etc/nginx/ssl/certificate.crt:ro  # Mount the certificate
+                - ./ssl/private.key:/etc/nginx/ssl/private.key:ro          # Mount the private key
+            ports:
+                - "443:443"  # Expose port 443 for HTTPS
+            networks:
+                - upload_network
+            depends_on:
+                - client
+    example nginx config -
+        events {
+            worker_connections 1024;
+        }
+
+        http {
+            upstream client_servers {
+                server client:5000;
+            }
+
+            # HTTPS server for secure communication
+            server {
+                listen 443 ssl;  # Listen on port 443 for HTTPS
+
+                # SSL/TLS configuration
+                ssl_certificate /etc/nginx/ssl/certificate.crt;  # Path to the certificate
+                ssl_certificate_key /etc/nginx/ssl/private.key;  # Path to the private key
+
+                # SSL/TLS protocols and ciphers
+                ssl_protocols TLSv1.2 TLSv1.3;  # Use secure protocols
+                ssl_ciphers HIGH:!aNULL:!MD5;   # Use secure ciphers
+
+                location / {
+                    proxy_pass http://client_servers;  # Forward requests to the `client` service
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+            }
+
+            # HTTP server for port range 5000-5005
+            server {
+                listen 5000-5005;  # Listen on ports 5000-5005 for HTTP
+
+                location / {
+                    proxy_pass http://client_servers;  # Forward requests to the `client` service
+                    proxy_set_header Host $host;
+                    proxy_set_header X-Real-IP $remote_addr;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $scheme;
+                }
+            }
+
+            # Optional: Redirect HTTP traffic to HTTPS
+            server {
+                listen 80;
+                server_name yourdomain.com;
+
+                return 301 https://$host$request_uri;  # Redirect to HTTPS
+            }
+        }
+
+rate limiting - is a technique used to control the amount of requests that can be made to a server in certain time period.
+    ngx_http_limit_req_module - is a module to implement rate limiting.
+    limit_req_zone - creates a shared memory zone to store the requests information.
+        Example:
+            http {
+                # Define a rate limit zone
+                limit_req_zone $binary_remote_addr zone=api_rate_limit:10m rate=10r/s;
+            }
+
+            

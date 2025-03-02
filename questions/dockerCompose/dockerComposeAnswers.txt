@@ -1,4 +1,6 @@
 
+context - Tells docker where to find the Docker file. Otherwise (not necessarily in this project) too much context can slow down the build process.
+
 
 networks - Lets us to define shared network for our services. 
     A specially usefull for security where some services can be access only from inside that network and not publicy avaialble. 
@@ -58,3 +60,13 @@ Rolling Updates - A deployment strategy where new versions of a service are grad
 
 ZeroDowntime Deployments - A deployment strategy where the application remains fully operational and accessible to users during the update process.
     No downtime or service interruption occurs.
+
+
+healthcheck - by implementing /health endpoint we can set a action to check the health of the container.
+    Example:
+        healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:5000/health"]  # Health check command
+        interval: 30s                                                # Check every 30 seconds
+        timeout: 10s                                                 # Timeout after 10 seconds
+        retries: 3                                                   # Retry 3 times before marking as unhealthy
+        start_period: 10s                                            # Wait 10 seconds before starting checks
