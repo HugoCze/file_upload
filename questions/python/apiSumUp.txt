@@ -1,0 +1,36 @@
+
+
+aiofiles - 
+    async file handling for python. Utilizes I/O operations in async mode. That helps to avoid blocking the event loop
+    while waitng for operation to complete.
+    buffering - technique used with I/O operations that helps you to store data in buffer(region of memory). This is done to reduce number of
+    read/write operations/inmteractions with the underlaying storage which are slower than ram memory operations.
+    Instead of writing data to a chunks data is accumulated and written in larger batches.
+
+        used:
+            flush_buffer function - Function responsible for wiring file info to file_index.json and cleaning buffer.
+
+            aiofiles.open() - async function that enables writing to a file in a+ plus. Meaning it will create a file and append changes. 
+            buffering=8192 - sets the buffer size.
+
+fastapi.UploadFile - Advatnage of using this class is that it provides a streamlined way to handle file uploads, including metadata.
+
+enabling multiple files upload at once  - async def upload_file(files: List[UploadFile] = File(...)):
+
+BackgroundTasks - BackgroundTasks class in FastAPI allows you to define tasks that should run in the background after the response is sent to the client. 
+    These tasks can accept arguments like methods and variables, making it a convenient way to handle tasks that don't need to block the main request-response cycle.
+
+    - By using BackgroundTasks, you avoid blocking the event loop, which is crucial for maintaining the performance of your FastAPI application. 
+        The tasks are added to a queue and executed in the background, ensuring that the main request handling remains efficient.
+    
+    Long running tasks - The main limitation of BackgroundTasks is that they are not suitable for very long-running tasks, 
+        as they still run within the same process as the FastAPI application. If a task takes too long, it could still impact the performance of the application. 
+        For long-running tasks, you might want to offload them to a separate worker process or use a task queue like Celery, RabbitMQ, or Redis Queue (RQ). 
+        These systems allow you to handle tasks asynchronously and can scale independently of your FastAPI application.
+
+    Background parallelism - While BackgroundTasks are asynchronous, they are not inherently parallel. 
+        They run sequentially in the background, but you can still achieve parallelism by using other techniques like asyncio.gather or threading. 
+        However, for true parallelism (especially for CPU-bound tasks), you would typically use threading or multiprocessing. 
+        For I/O-bound tasks, asyncio and BackgroundTasks are usually sufficient.
+
+    
