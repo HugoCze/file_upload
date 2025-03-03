@@ -1,5 +1,6 @@
 
-context - Tells docker where to find the Docker file. Otherwise (not necessarily in this project) too much context can slow down the build process.
+context - Tells docker where to find the Docker file. Otherwise (not necessarily in this project) 
+    too much context can slow down the build process.
 
 
 networks - Lets us to define shared network for our services. 
@@ -41,7 +42,8 @@ expose - expose directive lets us specify ports that continer will listen on int
         However, this port is not accessible from the host machine or external systems.
 
 
-restart - no: The container will not be restarted automatically. This is the default behavior.
+restart - Explanation of the different restart policies:
+    no: The container will not be restarted automatically. This is the default behavior.
     always: The container will always be restarted, regardless of the exit code.
     on-failure: The container will be restarted only if it exits with a non-zero exit code (indicating an error).
     unless-stopped: The container will be restarted unless it is explicitly stopped by the user (e.g., using docker-compose down or docker stop).
@@ -57,9 +59,22 @@ reservations - specifies the max amount of ram of cpu that is reserved for the c
 
 Rolling Updates - A deployment strategy where new versions of a service are gradually rolled out, replacing old instances one by one.
      This ensures that the service remains available during the update process.
+     Example:
+            deploy:
+                replicas: 3
+                update_config:
+                    parallelism: 1      # Update one instance at a time
+                    delay: 10s          # Wait 10 seconds between updates
 
 ZeroDowntime Deployments - A deployment strategy where the application remains fully operational and accessible to users during the update process.
     No downtime or service interruption occurs.
+    Example:
+        deploy:
+            replicas: 3
+            update_config:
+                parallelism: 1
+                delay: 10s
+                order: start-first  # Start new instances before stopping old ones
 
 
 healthcheck - by implementing /health endpoint we can set a action to check the health of the container.
@@ -70,3 +85,4 @@ healthcheck - by implementing /health endpoint we can set a action to check the 
         timeout: 10s                                                 # Timeout after 10 seconds
         retries: 3                                                   # Retry 3 times before marking as unhealthy
         start_period: 10s                                            # Wait 10 seconds before starting checks
+

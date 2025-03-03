@@ -5,6 +5,25 @@ PYTHONUNBUFFERED - Helps to mange python application logs by disabling buffering
 PYTHONPATH - Tells python where to find modules and packages in its module search path.
     It also insures that python can find the modules and packages in the project.
 
+
+PYTHONMALLOC - PYTHONMALLOC=malloc Control the memory allocator used by python.
+    Python memory allocator for small objects reducing fragmentation.
+    Used for better performances and debugging memory related issues.
+
+PYTHONDEVMODE - PYTHONDEVMODE=1 Adds addtional RUNTIME check and warnings for debugging.
+
+PYTHONGC - PYTHONGC=aggressive usefull for reducing memory by appling more aggresive garbage collection strategy. 
+    May increase CPU usage but free up some memory more frequently.
+
+PYTHONASYNCIODEBUG - PYTHONASYNCIODEBUG=0 - Enables asyncio debugging.
+    Helps to track and debug asyncio related issues.
+
+PYTHONMEMORY_LIMIT - PYTHONMEMORY_LIMIT="8G" - Limits the amount of memory that can be used by python.
+    Helps to prevent memory leaks and out of memory errors.
+
+
+
+
 -X dev flag - Enables python development mode, which provides addtional runtime check and warning to help with debug. 
     Like for example: Enhanced wanrnings, debugging hooks, resource warnings and faulthandler.
 
