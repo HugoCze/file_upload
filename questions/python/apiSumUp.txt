@@ -33,4 +33,8 @@ BackgroundTasks - BackgroundTasks class in FastAPI allows you to define tasks th
         However, for true parallelism (especially for CPU-bound tasks), you would typically use threading or multiprocessing. 
         For I/O-bound tasks, asyncio and BackgroundTasks are usually sufficient.
 
-    
+
+fastapi.Form - Form dependency si use to extract data from http requests, html forms or multipart/form-data requests.
+
+fastapi.Body - Body is used to extract data from the request body as well but rahter than html forms it is used for json data.
+
